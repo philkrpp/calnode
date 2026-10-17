@@ -27,7 +27,7 @@ func BuildICS(d BookingData, method string) []byte {
 	var b strings.Builder
 	writeICSLine(&b, "BEGIN:VCALENDAR")
 	writeICSLine(&b, "VERSION:2.0")
-	writeICSLine(&b, "PRODID:-//Calnode//Booking//EN")
+	writeICSLine(&b, "PRODID:-//Booking//Booking//EN")
 	writeICSLine(&b, "CALSCALE:GREGORIAN")
 	writeICSLine(&b, "METHOD:"+method)
 	writeICSLine(&b, "BEGIN:VEVENT")
@@ -90,13 +90,21 @@ func escapeICSText(s string) string {
 	s = strings.ReplaceAll(s, ",", `\,`)
 	s = strings.ReplaceAll(s, "\r\n", `\n`)
 	s = strings.ReplaceAll(s, "\n", `\n`)
+	s = strings.ReplaceAll(s, "\r", `\n`)
 	return s
 }
 
 // escapeICSParam quotes a property-parameter value (e.g. CN) so embedded spaces,
 // commas, or colons can't break parsing. Double quotes aren't allowed inside a
-// quoted param value, so they're stripped.
+// quoted param value, so they're stripped; control characters (CR/LF would start a
+// new content line) become spaces.
 func escapeICSParam(s string) string {
+	s = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return ' '
+		}
+		return r
+	}, s)
 	return `"` + strings.ReplaceAll(s, `"`, "") + `"`
 }
 

@@ -38,6 +38,7 @@ import (
 // has finished its current poll cycle.
 func BuildHandler(ctx context.Context, cfg *config.Config, db *sql.DB, logger *slog.Logger) (*handler.Handler, func()) {
 	h := handler.New(db, logger)
+	h.SetSecureCookie(cfg.CookieSecure)
 	h.SetBaseURL(cfg.BaseURL)
 	h.SetPublicBaseURL(cfg.PublicBaseURL)
 	// DATA_DIR, defaulting to the relative "data" every deployment has always used.
@@ -542,7 +543,15 @@ func New(ctx context.Context, cfg *config.Config, db *sql.DB, logger *slog.Logge
 
 	// Favicon at the root, shared by the public server-rendered pages and the
 	// browser's default /favicon.ico probe — same embedded source as the admin SPA.
-	favicon := frontend.FaviconHandler()
+	// An uploaded branding logo replaces the embedded icon.
+	embeddedFavicon := frontend.FaviconHandler()
+	favicon := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if h.HasBrandingLogo() {
+			h.ServeBrandingLogo(w, r)
+			return
+		}
+		embeddedFavicon.ServeHTTP(w, r)
+	})
 	mux.Handle("GET /favicon.svg", favicon)
 	mux.Handle("GET /favicon.ico", favicon)
 
@@ -573,7 +582,7 @@ func New(ctx context.Context, cfg *config.Config, db *sql.DB, logger *slog.Logge
 		logger.Info("trusting forwarded headers from proxies", "cidrs", cfg.TrustedProxyCIDRs)
 	}
 
-	return TrustClientIP(trustedProxies)(RequestID(Logging(logger, Recover(logger, SameOriginCheck(mux))))), drain
+	return TrustClientIP(trustedProxies)(RequestID(Logging(logger, Recover(logger, SecurityHeaders(cfg.CookieSecure)(SameOriginCheck(mux)))))), drain
 }
 
 // seedSMTPToDB writes env-var SMTP settings into the DB on first boot so they

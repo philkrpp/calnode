@@ -87,6 +87,34 @@ func TestBuildICS_escapesText(t *testing.T) {
 	}
 }
 
+// The booker's name comes straight from the public booking form, so a CR/LF in it
+// must not start a new ICS content line (extra ATTACH/ATTENDEE/VEVENT properties).
+func TestBuildICS_nameCannotInjectProperties(t *testing.T) {
+	d := testBookingData()
+	d.OrganizerName = "Bob\r\nATTACH:https://evil.example/x\nEND:VEVENT\rBEGIN:VEVENT"
+	d.InviteOrganizerName = "Team\r\nURL:https://evil.example"
+	d.HideHostInInvite = true
+	d.InviteOrganizerEmail = "bookings@team.example"
+	d.EventTypeName = "Call\rURL:https://evil.example"
+	got := string(BuildICS(d, "REQUEST"))
+	unfolded := strings.ReplaceAll(got, "\r\n ", "")
+	vevents := 0
+	for _, line := range strings.Split(unfolded, "\r\n") {
+		if strings.HasPrefix(line, "ATTACH") || strings.HasPrefix(line, "URL") {
+			t.Errorf("injected property line %q:\n%s", line, got)
+		}
+		if line == "BEGIN:VEVENT" {
+			vevents++
+		}
+	}
+	if vevents != 1 {
+		t.Errorf("got %d VEVENTs, want 1:\n%s", vevents, got)
+	}
+	if strings.ContainsAny(strings.ReplaceAll(got, "\r\n", ""), "\r\n") {
+		t.Errorf("bare CR or LF left in the ICS:\n%q", got)
+	}
+}
+
 func TestBuildICS_foldsLongLines(t *testing.T) {
 	d := testBookingData()
 	d.LocationValue = "https://meet.example.com/" + strings.Repeat("x", 200)

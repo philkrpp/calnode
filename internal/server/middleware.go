@@ -313,6 +313,24 @@ func FrameAncestors(origins []string) func(http.Handler) http.Handler {
 	}
 }
 
+// SecurityHeaders sets baseline response headers on every route: nosniff, a
+// same-origin Referrer-Policy (manage links carry their token in the path), and
+// HSTS when the instance is served over https. They are set before next runs, so a
+// handler that sets its own value replaces them.
+func SecurityHeaders(hsts bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h := w.Header()
+			h.Set("X-Content-Type-Options", "nosniff")
+			h.Set("Referrer-Policy", "same-origin")
+			if hsts {
+				h.Set("Strict-Transport-Security", "max-age=31536000")
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // remoteIP returns the IP a per-IP limit keys on.
 //
 // By default that is the TCP-level remote address, stripped of its port, and the

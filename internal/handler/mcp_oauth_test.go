@@ -372,3 +372,36 @@ func TestMCP_OAuthBearerRejectedWhenArchived(t *testing.T) {
 		t.Errorf("refresh after archive issued tokens to an archived user: %s", rec.Body.String())
 	}
 }
+
+// Dynamic client registration is open, so client_name is attacker-chosen. The consent
+// screen must show where the code is actually sent, not only the self-declared name.
+func TestMCP_OAuthConsentShowsRedirectHost(t *testing.T) {
+	h, database, _, userID := setupWorkspaceWithDB(t)
+	const sessID = "oauth-host-session"
+	database.Exec(`INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)`,
+		sessID, userID, time.Now().Add(time.Hour).UTC().Format(time.RFC3339))
+
+	const redirectURI = "https://evil.example/cb"
+	rec := httptest.NewRecorder()
+	h.RegisterOAuthClient(rec, httptest.NewRequest(http.MethodPost, "/oauth/register",
+		strings.NewReader(`{"client_name":"Claude","redirect_uris":["`+redirectURI+`"]}`)))
+	var reg struct {
+		ClientID string `json:"client_id"`
+	}
+	json.Unmarshal(rec.Body.Bytes(), &reg)
+
+	q := url.Values{
+		"response_type": {"code"}, "client_id": {reg.ClientID}, "redirect_uri": {redirectURI},
+		"code_challenge": {"abc"}, "code_challenge_method": {"S256"}, "state": {"s"},
+	}
+	req := httptest.NewRequest(http.MethodGet, "/oauth/authorize?"+q.Encode(), nil)
+	req.AddCookie(&http.Cookie{Name: "calnode_session", Value: sessID})
+	rec = httptest.NewRecorder()
+	h.AuthorizeMCP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("consent render: %d — %s", rec.Code, rec.Body)
+	}
+	if !strings.Contains(rec.Body.String(), `<span class="who">evil.example</span>`) {
+		t.Errorf("consent screen does not show the redirect host:\n%s", rec.Body)
+	}
+}

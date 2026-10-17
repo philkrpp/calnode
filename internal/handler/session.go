@@ -12,6 +12,14 @@ import (
 	"time"
 )
 
+// SetSecureCookie sets the Secure flag for every cookie the handler issues. It is
+// called at boot whether or not Google/Microsoft OAuth is configured.
+func (h *Handler) SetSecureCookie(secure bool) {
+	h.authMu.Lock()
+	h.secureCookie = secure
+	h.authMu.Unlock()
+}
+
 // createSession inserts a session row and sets the session cookie on w.
 func (h *Handler) createSession(ctx context.Context, w http.ResponseWriter, userID string) error {
 	raw := make([]byte, 32)

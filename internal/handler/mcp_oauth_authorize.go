@@ -73,6 +73,7 @@ var consentTmpl = template.Must(template.New("consent").Parse(`<!doctype html>
   <h1>Connect to {{.Business}}</h1>
   <p><span class="who">{{.ClientName}}</span> wants to access your scheduling workspace as <span class="who">{{.UserEmail}}</span>.</p>
   <div class="scope">It will be able to read your event types and availability, and create, reschedule, and cancel bookings on your behalf.</div>
+  <p>Access is sent to <span class="who">{{.RedirectTarget}}</span>. Only allow if you recognise this address — the name above is chosen by the application itself.</p>
   <form method="post" action="/oauth/authorize">
     <input type="hidden" name="response_type" value="{{.AR.ResponseType}}">
     <input type="hidden" name="client_id" value="{{.AR.ClientID}}">
@@ -354,8 +355,16 @@ func (h *Handler) renderConsent(w http.ResponseWriter, r *http.Request, ar authR
 	// /oauth/authorize (self), which then 302-redirects to the client — and browsers
 	// enforce form-action across that redirect, so 'self' alone blocks the hand-back.
 	formAction := "'self'"
-	if u, err := url.Parse(ar.RedirectURI); err == nil && u.Scheme != "" && u.Host != "" {
-		formAction += " " + u.Scheme + "://" + u.Host
+	// RedirectTarget names where the code goes: client_name is self-declared at open
+	// registration, so the host is what the user can actually verify.
+	redirectTarget := ar.RedirectURI
+	if u, err := url.Parse(ar.RedirectURI); err == nil && u.Scheme != "" {
+		if u.Host != "" {
+			formAction += " " + u.Scheme + "://" + u.Host
+			redirectTarget = u.Host
+		} else {
+			redirectTarget = u.Scheme + ":"
+		}
 	}
 	csrf := randHex(16)
 	http.SetCookie(w, &http.Cookie{ // #nosec G124 -- HttpOnly/SameSite/Secure are all set; Secure is h.secureCookie (dynamic on BASE_URL scheme), which gosec's static check can't verify
@@ -366,11 +375,12 @@ func (h *Handler) renderConsent(w http.ResponseWriter, r *http.Request, ar authR
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action "+formAction+"; base-uri 'none'")
 	w.Header().Set("X-Frame-Options", "DENY")
 	_ = consentTmpl.Execute(w, map[string]any{
-		"Business":   business,
-		"ClientName": clientName,
-		"UserEmail":  email,
-		"AR":         ar,
-		"CSRF":       csrf,
+		"Business":       business,
+		"ClientName":     clientName,
+		"RedirectTarget": redirectTarget,
+		"UserEmail":      email,
+		"AR":             ar,
+		"CSRF":           csrf,
 	})
 }
 
