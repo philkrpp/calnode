@@ -339,6 +339,12 @@ func (h *Handler) DeleteBrandingLogo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// HasBrandingLogo reports whether an admin has uploaded a branding logo.
+func (h *Handler) HasBrandingLogo() bool {
+	_, err := os.Stat(filepath.Join(h.brandingDir(), "logo.png"))
+	return err == nil
+}
+
 // ServeBrandingLogo handles GET /branding/logo. Public — the logo is embedded in
 // public pages and emails.
 func (h *Handler) ServeBrandingLogo(w http.ResponseWriter, r *http.Request) {
