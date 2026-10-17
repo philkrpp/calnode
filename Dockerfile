@@ -43,8 +43,16 @@ ARG VERSION=dev
 # images are deployable: they report version "dev", leaving nothing else to identify
 # the build by.
 ARG COMMIT=""
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
-    -ldflags="-s -w -X github.com/calnode/calnode/internal/buildinfo.Version=${VERSION} -X github.com/calnode/calnode/internal/buildinfo.Commit=${COMMIT}" \
+# Coolify passes SOURCE_COMMIT instead of VERSION/COMMIT. Without a VERSION build
+# arg, fall back to the latest released version in CHANGELOG.md.
+ARG SOURCE_COMMIT=""
+RUN V="${VERSION}"; \
+    if [ "$V" = "dev" ]; then \
+      V=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | tr -d '#[] '); \
+    fi; \
+    C="${COMMIT:-$SOURCE_COMMIT}"; \
+    CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
+    -ldflags="-s -w -X github.com/calnode/calnode/internal/buildinfo.Version=${V:-dev} -X github.com/calnode/calnode/internal/buildinfo.Commit=${C}" \
     -o calnode ./cmd/calnode
 
 # Download Litestream for the deployment target, matching TARGETARCH
