@@ -5,11 +5,11 @@ FROM node:24-alpine AS frontend-builder
 
 # Pin pnpm to the version in package.json's `packageManager` field (not @latest)
 # so CI builds are reproducible and match the committed lockfile.
-RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+RUN corepack enable && corepack prepare pnpm@12.15.0 --activate
 
 WORKDIR /app
 
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY frontend/ .

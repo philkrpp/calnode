@@ -90,7 +90,7 @@ Railway auto-detects the `Dockerfile` and builds it. Steps:
 ### Railway-specific build notes (already handled in this repo)
 - **No `VOLUME` directive in the Dockerfile** — Railway's builder rejects it; storage
   comes from the managed volume.
-- **pnpm under CI:** the build pins `pnpm` and lists `pnpm.onlyBuiltDependencies`, so
+- **pnpm under CI:** the build pins `pnpm` and lists `allowBuilds` in `frontend/pnpm-workspace.yaml`, so
   `pnpm install --frozen-lockfile` doesn't hard-fail under `CI=true`.
 
 ---

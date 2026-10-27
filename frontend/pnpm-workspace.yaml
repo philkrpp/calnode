@@ -1,0 +1,5 @@
+# Configuration for this independent package only; no child workspace members.
+allowBuilds:
+  msw: true
+overrides:
+  "cookie@^0.6.0": ^0.7.2
