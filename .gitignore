@@ -72,3 +72,12 @@ __pycache__/
 .superpowers/
 .worktrees/
 .lighthouseci/
+
+# impeccable: local-only files
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/mocks/
+.impeccable/review/
+
+# local tool files
+.camouleadly-mcp/
