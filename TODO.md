@@ -10,4 +10,4 @@ Regeln: ~/.codex/AGENTS.md, Abschnitt "Repo-Aufgaben und Entscheidungen".
 
 ## Offen (aus SiYuan übernommen 2026-11-20)
 
-- [ ] Litestream-Backup nach R2 einrichten, bevor echte Buchungen laufen – Quelle: ~/.claude/projects/-Users-philippkrapp-Projekte-compleadly-proxmox/memory/calnode-booking.md#litestream-r2
+- [ ] Litestream-Backup nach R2 einrichten, bevor echte Buchungen laufen – Quelle: ~/.claude/projects/-Users-philippkrapp-Projekte-proxmox/memory/calnode-booking.md#litestream-r2
